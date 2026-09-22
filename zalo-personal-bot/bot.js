@@ -33,9 +33,22 @@ const bootAt = Date.now();
 function startHealthServer() {
   const port = Number(process.env.PORT) || 3000;
   const srv = http.createServer((req, res) => {
-    const body = JSON.stringify({ ok: true, bot: "ubm-zalo-personal-bot", uptimeSec: Math.floor((Date.now() - bootAt) / 1000) });
+    if (req.url === "/qr") {
+      // QR dang nhap Zalo (file qr.png do zca-js tao, het han ~90s -> F5 lay ma moi)
+      try {
+        const img = fs.readFileSync(new URL("./qr.png", import.meta.url));
+        res.writeHead(200, { "Content-Type": "image/png", "Cache-Control": "no-store" });
+        res.end(img);
+        return;
+      } catch (e) {
+        res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+        res.end("Chua co QR (bot da login? hoac doi vai giay roi F5)");
+        return;
+      }
+    }
+    const body = JSON.stringify({ ok: true, bot: "ubm-zalo-personal-bot", uptimeSec: Math.floor((Date.now() - bootAt) / 1000), qr: "/qr" });
     res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(req.url === "/" ? "UBM zalo bot OK" : body);
+    res.end(req.url === "/" ? "UBM zalo bot OK - quet QR tai /qr" : body);
   });
   srv.listen(port, () => console.log(`[bot] health server on :${port}`));
 }
