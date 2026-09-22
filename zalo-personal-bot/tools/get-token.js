@@ -25,7 +25,7 @@ if (!clientId || !clientSecret) {
 const oauth2 = new google.auth.OAuth2(
   clientId,
   clientSecret,
-  "http://localhost:53682/callback"
+  "http://localhost"
 );
 
 const url = oauth2.generateAuthUrl({
@@ -35,6 +35,8 @@ const url = oauth2.generateAuthUrl({
 });
 console.log("\n1) Mo URL nay, dang nhap Gmail CA NHAN, Allow:\n");
 console.log(url + "\n");
+console.log("   Trinh duyet se bao 'khong the truy cap localhost' - BINH THUONG.");
+console.log("   Copy doan code=4/... trong THANH DIA CHI trinh duyet.\n");
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 rl.question("2) Dan authorization code vao day: ", async (code) => {
