@@ -5,6 +5,11 @@
  */
 
 function autoMeetLink_(tieuDe, batDau, phut, moTa) {
+  var start = new Date(batDau);
+  if (!isNaN(start.getTime())) {
+    var viaRender = tryRenderMeet_(tieuDe, start, phut);
+    if (viaRender) return viaRender;
+  }
   try {
     if (typeof Calendar === "undefined" || !Calendar.Events || !Calendar.Events.insert) return "";
     var start = new Date(batDau);
@@ -23,6 +28,25 @@ function autoMeetLink_(tieuDe, batDau, phut, moTa) {
       }
     }
     return ev.hangoutLink || "";
+  } catch (e) {
+    return "";
+  }
+}
+
+/** Goi bot Render tao Meet (qua Gmail ca nhan) - can ScriptProperties RENDER_BOT_URL + BRIDGE_KEY */
+function tryRenderMeet_(tieuDe, start, phut) {
+  var p = {};
+  try { p = PropertiesService.getScriptProperties().getProperties(); } catch (e) {}
+  var base = p.RENDER_BOT_URL || "";
+  var key = p.BRIDGE_KEY || "";
+  if (!base || !key) return "";
+  try {
+    var res = UrlFetchApp.fetch(base.replace(/\/$/, "") + "/meet", {
+      method: "post", contentType: "application/json", muteHttpExceptions: true,
+      payload: JSON.stringify({ key: key, title: tieuDe, start: start.toISOString(), minutes: phut || 45 })
+    });
+    var body = JSON.parse(res.getContentText() || "{}");
+    return (body && body.success && body.link) ? body.link : "";
   } catch (e) {
     return "";
   }

@@ -19,6 +19,7 @@
  */
 import fs from "node:fs";
 import http from "node:http";
+import { google } from "googleapis";
 import { Zalo, ThreadType } from "zca-js";
 
 const CFG = {
@@ -29,10 +30,67 @@ const CFG = {
 const credPath = new URL("./credentials.json", import.meta.url);
 const bootAt = Date.now();
 
+/** Google Calendar (Gmail ca nhan) de tao link Meet - can env GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN */
+function googleCalendar() {
+  const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN } = process.env;
+  if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REFRESH_TOKEN) return null;
+  const auth = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET);
+  auth.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
+  return google.calendar({ version: "v3", auth });
+}
+
+function jres(res, code, obj) {
+  res.writeHead(code, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(obj));
+}
+
+/** POST /meet {key,title,start,minutes} -> {success,link} (Apps Script goi sang) */
+function handleMeet(req, res) {
+  let raw = "";
+  req.on("data", (c) => (raw += c));
+  req.on("end", async () => {
+    try {
+      const b = JSON.parse(raw || "{}");
+      if (!CFG.bridgeKey || b.key !== CFG.bridgeKey) return jres(res, 403, { success: false, error: "Sai key" });
+      const cal = googleCalendar();
+      if (!cal) return jres(res, 200, { success: false, error: "Thieu GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN" });
+      const start = new Date(b.start);
+      if (isNaN(start.getTime())) return jres(res, 200, { success: false, error: "start khong hop le" });
+      const mins = Number(b.minutes) || 45;
+      const end = new Date(start.getTime() + mins * 60000);
+      const ev = await cal.events.insert({
+        calendarId: "primary",
+        conferenceDataVersion: 1,
+        requestBody: {
+          summary: b.title || "Phong van UBM",
+          description: "Auto by UBM zalo bot",
+          start: { dateTime: start.toISOString(), timeZone: "Asia/Ho_Chi_Minh" },
+          end: { dateTime: end.toISOString(), timeZone: "Asia/Ho_Chi_Minh" },
+          conferenceData: {
+            createRequest: {
+              requestId: Date.now().toString(36) + Math.random().toString(36).slice(2, 10),
+              conferenceSolutionKey: { type: "hangoutsMeet" },
+            },
+          },
+        },
+      });
+      const eps = (ev.data.conferenceData && ev.data.conferenceData.entryPoints) || [];
+      const link = ((eps.find((e) => e.uri) || {}).uri) || ev.data.hangoutLink || "";
+      jres(res, 200, { success: !!link, link });
+    } catch (e) {
+      jres(res, 200, { success: false, error: String(e?.message || e).slice(0, 300) });
+    }
+  });
+}
+
 /** Web server mini cho UptimeRobot ping giu thuc (Render free) + kiem tra song/chet */
 function startHealthServer() {
   const port = Number(process.env.PORT) || 3000;
   const srv = http.createServer((req, res) => {
+    if (req.url === "/meet" && req.method === "POST") {
+      handleMeet(req, res);
+      return;
+    }
     if (req.url === "/qr") {
       // QR dang nhap Zalo (file qr.png do zca-js tao, het han ~90s -> F5 lay ma moi)
       try {
