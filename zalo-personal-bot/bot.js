@@ -91,6 +91,11 @@ function startHealthServer() {
       handleMeet(req, res);
       return;
     }
+    if (req.url === "/meet-check") {
+      const key = (req.url.split("key=")[1] || "").split("&")[0];
+      if (!CFG.bridgeKey || decodeURIComponent(key) !== CFG.bridgeKey) return jres(res, 403, { success: false, error: "Sai key" });
+      return jres(res, 200, { success: true, googleConfigured: !!googleCalendar() });
+    }
     if (req.url === "/qr") {
       // QR dang nhap Zalo (file qr.png do zca-js tao, het han ~90s -> F5 lay ma moi)
       try {

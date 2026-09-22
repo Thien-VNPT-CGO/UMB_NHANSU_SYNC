@@ -52,14 +52,37 @@ function tryRenderMeet_(tieuDe, start, phut) {
   }
 }
 
-/** Chay trong Editor de xem loi that: tra ve {calendar, link, error} */
+/** Kiem tra nhanh Render (bot song? co Google creds?) - khong tao event that */
+function checkRenderMeet_() {
+  var out = { urlSet: false, botOk: false, googleConfigured: false, error: "" };
+  var p = {};
+  try { p = PropertiesService.getScriptProperties().getProperties(); } catch (e) {}
+  var base = p.RENDER_BOT_URL || "";
+  var key = p.BRIDGE_KEY || "";
+  out.urlSet = !!base;
+  if (!base || !key) { out.error = !base ? "Chua dat ScriptProperties RENDER_BOT_URL" : "Chua dat BRIDGE_KEY"; return out; }
+  try {
+    var res = UrlFetchApp.fetch(base.replace(/\/$/, "") + "/meet-check?key=" + encodeURIComponent(key), { muteHttpExceptions: true });
+    var body = JSON.parse(res.getContentText() || "{}");
+    out.botOk = res.getResponseCode() === 200 && !!body.success;
+    out.googleConfigured = !!body.googleConfigured;
+    if (!out.botOk) out.error = "Bot khong tra loi/Sai key: " + res.getContentText().substring(0, 200);
+    else if (!out.googleConfigured) out.error = "Bot song nhung thieu GOOGLE_CLIENT_ID/SECRET/REFRESH_TOKEN tren Render";
+  } catch (e) {
+    out.error = "Khong goi duoc bot (Render dang ngu? doi 1 phut thu lai): " + String((e && e.message) || e).substring(0, 200);
+  }
+  return out;
+}
+
+/** Chay trong Editor de xem loi that: tra ve {calendar, link, error, render} */
 function testCreateMeet() {
-  var info = { calendar: false, link: "", error: "" };
+  var info = { calendar: false, link: "", error: "", render: {} };
   try {
     info.calendar = (typeof Calendar !== "undefined" && !!Calendar.Events && !!Calendar.Events.insert);
   } catch (e) { info.calendar = false; }
+  info.render = checkRenderMeet_();
   if (!info.calendar) {
-    info.error = "Chua bat Services > Google Calendar API trong Editor";
+    info.error = "Chua bat Services > Google Calendar API trong Editor (nhanh Render van co the chay - xem render)";
     return info;
   }
   try {
