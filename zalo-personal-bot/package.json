@@ -1,0 +1,15 @@
+{
+  "name": "ubm-zalo-personal-bot",
+  "version": "1.0.0",
+  "description": "Cau noi Zalo ca nhan (zca-js) -> Google Apps Script Demo Nhan Su V1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node bot.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "zca-js": "^2.0.0"
+  }
+}
