@@ -1,0 +1,19 @@
+{
+  "name": "ubm-hrm-socket-server",
+  "version": "1.0.0",
+  "description": "Server Socket.IO + Google Sheets (DB chinh) cho Demo Nhan Su V1.0.0",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "googleapis": "^128.0.0",
+    "socket.io": "^4.7.5"
+  }
+}
